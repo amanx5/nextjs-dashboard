@@ -1,6 +1,5 @@
 'use server';
 
-import { z, type typeToFlattenedError } from 'zod';
 import postgres from 'postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -9,13 +8,8 @@ import {
 	CreateInvoiceFormSchema,
 	UpdateInvoiceFormSchema,
 } from '@/app/lib/schemas';
-
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
-
-export type ActionStateValue<T extends z.ZodSchema> = {
-	errors?: typeToFlattenedError<z.infer<T>>['fieldErrors'];
-	message?: string | null;
-};
+import type { ActionStateValue } from '@/app/lib/actions';
+import { sql } from '@/app/lib/sql';
 
 export type CreateInvoiceActionState = ActionStateValue<
 	typeof CreateInvoiceFormSchema
