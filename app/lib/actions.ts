@@ -1,34 +1,54 @@
 'use server';
 
-import { z } from 'zod';
+import { z, type typeToFlattenedError } from 'zod';
 import postgres from 'postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+	extractRawFormData,
+	CreateInvoiceFormSchema,
+	UpdateInvoiceFormSchema,
+} from '@/app/lib/schemas';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
-const FormSchema = z.object({
-	id: z.string(),
-	customerId: z.string(),
-	amount: z.coerce.number(),
-	status: z.enum(['pending', 'paid']),
-	date: z.string(),
-});
+export type ActionStateValue<T extends z.ZodSchema> = {
+	errors?: typeToFlattenedError<z.infer<T>>['fieldErrors'];
+	message?: string | null;
+};
 
-const CreateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+export type CreateInvoiceActionState = ActionStateValue<
+	typeof CreateInvoiceFormSchema
+>;
+
+export type UpdateInvoiceActionState = ActionStateValue<
+	typeof UpdateInvoiceFormSchema
+>;
 
 // create
-export async function createInvoice(formData: FormData) {
-	const { customerId, amount, status } = CreateInvoice.parse({
-		customerId: formData.get('customerId'),
-		amount: formData.get('amount'),
-		status: formData.get('status'),
-	});
+export async function createInvoice(
+	prevState: CreateInvoiceActionState,
+	formData: FormData,
+): Promise<CreateInvoiceActionState> | never {
+	const rawFormData = extractRawFormData(CreateInvoiceFormSchema, formData);
 
+	// Validate form using schema.safeParse (doesn' throw)
+	const validation = CreateInvoiceFormSchema.safeParse(rawFormData);
+
+	// If form validation fails, return errors early. Otherwise, continue.
+	if (!validation.success) {
+		return {
+			errors: validation.error.flatten().fieldErrors,
+			message: 'Validation Error: Invoice not created. Data is invalid.',
+		};
+	}
+
+	// Prepare data for insertion into the database
+	const { customerId, amount, status } = validation.data;
 	const amountInCents = amount * 100;
 	const date = new Date().toISOString().split('T')[0];
 
+	// Insert data into the database
 	try {
 		await sql`
 			INSERT INTO invoices (customer_id, amount, status, date)
@@ -39,30 +59,42 @@ export async function createInvoice(formData: FormData) {
 		throw new Error('Database Error: Failed to Create Invoice.');
 	}
 
+	// Revalidate the cache for the invoices page and redirect the user.
 	revalidatePath('/dashboard/invoices');
 	redirect('/dashboard/invoices');
 }
 
 // update
-export async function updateInvoice(id: string, formData: FormData) {
-	const { customerId, amount, status } = UpdateInvoice.parse({
-		customerId: formData.get('customerId'),
-		amount: formData.get('amount'),
-		status: formData.get('status'),
-	});
+export async function updateInvoice(
+	id: string,
+	prevState: UpdateInvoiceActionState,
+	formData: FormData,
+) {
+	const rawFormData = extractRawFormData(UpdateInvoiceFormSchema, formData);
 
+	// Validate form using schema.safeParse (doesn't throw)
+	const validation = UpdateInvoiceFormSchema.safeParse(rawFormData);
+
+	// If form validation fails, return errors early. Otherwise, continue.
+	if (!validation.success) {
+		return {
+			errors: validation.error.flatten().fieldErrors,
+			message: 'Validation Error: Invoice not updated. Data is invalid.',
+		};
+	}
+
+	const { customerId, amount, status } = validation.data;
 	const amountInCents = amount * 100;
 
 	try {
 		await sql`
-        UPDATE invoices
-        SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-        WHERE id = ${id}
-      `;
-	} catch (error) {
-		// We'll also log the error to the console for now
-		console.error(error);
-		return { message: 'Database Error: Failed to Update Invoice.' };
+			UPDATE invoices
+			SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+			WHERE id = ${id}
+		`;
+	} catch (err) {
+		console.error('Database Error:', err);
+		throw new Error('Database Error: Failed to update invoice.');
 	}
 
 	revalidatePath('/dashboard/invoices');
@@ -71,6 +103,12 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 // delete
 export async function deleteInvoice(id: string) {
-	await sql`DELETE FROM invoices WHERE id = ${id}`;
+	try {
+		await sql`DELETE FROM invoices WHERE id = ${id}`;
+	} catch (err) {
+		console.error('Database Error:', err);
+		throw new Error('Database Error: Failed to delete invoice.');
+	}
+
 	revalidatePath('/dashboard/invoices');
 }
