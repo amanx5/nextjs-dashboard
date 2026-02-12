@@ -14,21 +14,21 @@ const sql = postgres(process.env.POSTGRES_URL!, {
 	debug: (connection, query, params) => {
 		const timestamp = new Date().toISOString();
 
-		const cleanQuery = query.replace(/\s+/g, ' ').trim(); // temporary cleaner, NOTE: It will trim param values too which is wrong
+		const cleanQuery = query.replace(/\s+/g, ' ').trim(); // temporary way to clean, NOTE: It will trim param values too which is wrong
 
 		let i = 0;
-		const interpolated = cleanQuery.replace(/\$(\d+)/g, () =>
+		const interpolatedQuery = cleanQuery.replace(/\$(\d+)/g, () =>
 			formatValue(params[i++]),
 		);
 
 		const color = {
-			gray: (s: string) => `\x1b[90m${s}\x1b[0m`,
-			cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
+			date: (s: string) => `\x1b[90m${s}\x1b[0m`,
+			query: (s: string) => `\x1b[36m${s}\x1b[0m`,
 			yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
 		};
 
 		console.log(
-			`${color.gray(`[${timestamp}]`)}: ${color.cyan(interpolated)}`,
+			`${color.date(`[${timestamp}]`)}: ${color.query(interpolatedQuery)}`,
 		);
 
 		function formatValue(value: unknown): string {
@@ -60,7 +60,7 @@ export async function fetchLatestInvoices() {
 	try {
 		// await new Promise((resolve) => setTimeout(resolve, 6000));
 		const data = await sql<LatestInvoiceRaw[]>`SELECT
-			invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
+				invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
 			FROM invoices
 			JOIN customers ON invoices.customer_id = customers.id
 			ORDER BY invoices.date DESC
@@ -153,10 +153,11 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
 	try {
-		const data = await sql`SELECT COUNT(*)
-			FROM invoices
-			JOIN customers ON invoices.customer_id = customers.id
-			WHERE
+		const data = await sql`
+		SELECT COUNT(*)
+		FROM invoices
+		JOIN customers ON invoices.customer_id = customers.id
+		WHERE
 			customers.name ILIKE ${`%${query}%`} OR
 			customers.email ILIKE ${`%${query}%`} OR
 			invoices.amount::text ILIKE ${`%${query}%`} OR
@@ -190,6 +191,8 @@ export async function fetchInvoiceById(id: string) {
 			amount: invoice.amount / 100,
 		}));
 
+		console.log(invoice); // Invoice is an empty array []
+
 		return invoice[0];
 	} catch (error) {
 		console.error('Database Error:', error);
@@ -218,18 +221,18 @@ export async function fetchFilteredCustomers(query: string) {
 	try {
 		const data = await sql<CustomersTableType[]>`
 			SELECT
-			customers.id,
-			customers.name,
-			customers.email,
-			customers.image_url,
-			COUNT(invoices.id) AS total_invoices,
-			SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-			SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
+				customers.id,
+				customers.name,
+				customers.email,
+				customers.image_url,
+				COUNT(invoices.id) AS total_invoices,
+				SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
+				SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
 			FROM customers
 			LEFT JOIN invoices ON customers.id = invoices.customer_id
 			WHERE
-			customers.name ILIKE ${`%${query}%`} OR
-			customers.email ILIKE ${`%${query}%`}
+				customers.name ILIKE ${`%${query}%`} OR
+				customers.email ILIKE ${`%${query}%`}
 			GROUP BY customers.id, customers.name, customers.email, customers.image_url
 			ORDER BY customers.name ASC
 	 	`;
