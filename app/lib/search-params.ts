@@ -1,30 +1,35 @@
-import type { SearchParamsProp } from '@/app/dashboard/invoices/page';
-
 /**
- * Represents the possible types of values that can be returned by URLSearchParams methods.
- * This type is a union of the return types of `getAll` and `get` methods of URLSearchParams.
+ * Type of search parameter values returned by `get`/`getAll` method of URLSearchParams.
  */
-export type URLSearchParamsValue =
+export type URLSearchParamValue =
 	| ReturnType<typeof URLSearchParams.prototype.getAll>
 	| ReturnType<typeof URLSearchParams.prototype.get>;
 
 /**
- * Represents the shape of search parameters passed as props to a page or layout component.
+ * Type of search parameter values resolved on awaiting `PageProps['searchParams]`.
  */
-export type SearchParamPropValue = SearchParamsProp[keyof SearchParamsProp];
+export type PageSearchParamValue = Awaited<
+	PageProps<'/'>['searchParams']
+>[string];
 
 /**
- * All possible types of search parameter values that can be normalized
+ * Universal type of search parameter values from different sources.
  */
-export type SearchParamValue = URLSearchParamsValue | SearchParamPropValue;
+export type SearchParamValue = URLSearchParamValue | PageSearchParamValue;
 
-export function normalizeQueryParam(value: SearchParamValue) {
+/**
+ * Normalizes `\dashboard\invoices?query`.
+ */
+export function normalizeQuerySearchParam(value: SearchParamValue) {
 	const queryStr = Array.isArray(value) ? value.at(-1) : value;
 
 	return queryStr || '';
 }
 
-export function normalizePageParam(value: SearchParamValue) {
+/**
+ * Normalizes `\dashboard\invoices?page`.
+ */
+export function normalizePageSearchParam(value: SearchParamValue) {
 	const pageStr = Array.isArray(value) ? value.at(-1) : value;
 
 	return Number(pageStr) || 1;

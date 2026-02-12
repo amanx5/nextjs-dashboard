@@ -7,8 +7,8 @@ import { lusitana } from '@/app/ui/fonts';
 import { InvoicesTableSkeleton } from '@/app/ui/skeletons';
 import { Suspense } from 'react';
 import {
-	normalizePageParam,
-	normalizeQueryParam,
+	normalizePageSearchParam,
+	normalizeQuerySearchParam,
 } from '@/app/lib/search-params';
 
 export type SearchParamsProp = {
@@ -21,8 +21,8 @@ type Props = {
 
 export default async function Page(props: Props) {
 	const searchParams = await props.searchParams;
-	const query = normalizeQueryParam(searchParams?.query);
-	const currentPage = normalizePageParam(searchParams?.page);
+	const query = normalizeQuerySearchParam(searchParams?.query);
+	const currentPage = normalizePageSearchParam(searchParams?.page);
 	const totalPages = await fetchInvoicesPages(query);
 
 	return (
