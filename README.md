@@ -1,5 +1,25 @@
-## Next.js App Router Course - Starter
+# Next.js Dashboard
 
-This is the starter template for the Next.js App Router Course. It contains the starting code for the dashboard application.
+A minimal dashboard application built with **Next.js 16**, **TypeScript**, **Tailwind CSS**, and **PostgreSQL**.
 
-For more information, see the [course curriculum](https://nextjs.org/learn) on the Next.js Website.
+Built following the [Next.js Learn Course](https://nextjs.org/learn).
+
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Auth**: NextAuth.js
+- **Database**: PostgreSQL (Neon/Supabase serverless)
+- **Styling**: Tailwind CSS
+- **Validation**: Zod
+
+
+## Features
+
+- Secure Authentication
+- Invoice Management (CRUD)
+- Real-time Search & Pagination
+- Responsive Design & Skeleton States
+
+---
+

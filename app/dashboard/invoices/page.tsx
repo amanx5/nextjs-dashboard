@@ -11,20 +11,12 @@ import {
 } from '@/app/lib/search-params';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
- 
+
 export const metadata: Metadata = {
-  title: 'Invoices',
+	title: 'Invoices',
 };
 
-export type SearchParamsProp = {
-	[key: string]: string | string[] | undefined;
-};
-
-type Props = {
-	searchParams?: Promise<SearchParamsProp>;
-};
-
-export default async function Page(props: Props) {
+export default async function Page(props: PageProps<'/dashboard/invoices'>) {
 	const searchParams = await props.searchParams;
 	const query = normalizeQuerySearchParam(searchParams?.query);
 	const currentPage = normalizePageSearchParam(searchParams?.page);
