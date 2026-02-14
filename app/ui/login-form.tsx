@@ -28,6 +28,10 @@ export default function LoginForm() {
 					Please log in to continue.
 				</h1>
 
+				<p className="text-sm text-gray-500">
+					Demo credentials: user@nextmail.com / 123456
+				</p>
+
 				{/* credential fields wrapper */}
 				<div className='w-full'>
 					{/* email */}
